@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     actualizarCarrito();
     
     // TODO: Agregar event listeners para los botones
+    checkoutBtn.addEventListener('click', procederPago);
+    clearCartBtn.addEventListener('click', mostrarModalVaciarCarrito);
+    loginBtn.addEventListener('click', mostrarModalLogin);
     // PISTA: checkoutBtn necesita un evento 'click' que llame a una función para procesar el pago
     // PISTA: clearCartBtn necesita un evento 'click' que llame a mostrarModalVaciarCarrito()
     // PISTA: loginBtn necesita un evento 'click' que llame a mostrarModalLogin()
@@ -74,12 +77,32 @@ function mostrarProductos() {
 }
 
 // TODO: Función para agregar un producto al carrito
-function agregarAlCarrito(productoId) {
-    // PISTA: Necesitas buscar el producto en el array 'productos' usando el productoId
-    // PISTA: Verifica si el producto ya existe en el carrito
-    // PISTA: Si existe, incrementa la cantidad; si no existe, agrégalo con cantidad 1
-    // PISTA: No olvides llamar actualizarCarrito() al final
-    // PISTA: Puedes usar mostrarMensaje() para notificar al usuario
+    function agregarAlCarrito(productoId) {
+    // Buscar el producto en el array 'productos' usando el productoId
+    const producto = productos.find(p => p.id === productoId);
+    if (!producto) {
+        mostrarMensaje('Producto no encontrado');
+        return;
+    }
+
+    // Verifica si el producto ya existe en el carrito
+    const itemCarrito = carrito.find(item => item.id === productoId);
+
+    if (itemCarrito) {
+        // Si existe, incrementa la cantidad
+        itemCarrito.cantidad += 1;
+        mostrarMensaje(`Se agregó otra unidad de "${producto.nombre}"`);
+    } else {
+        // Si no existe, agrégalo con cantidad 1
+        carrito.push({
+            ...producto,
+            cantidad: 1
+        });
+        mostrarMensaje(`"${producto.nombre}" agregado al carrito`);
+    }
+
+    // No olvides llamar actualizarCarrito() al final
+    actualizarCarrito();
 }
 
 // Función para actualizar la visualización del carrito
@@ -87,7 +110,10 @@ function actualizarCarrito() {
     // TODO: Actualizar contador del carrito en el header
     // PISTA: Calcula el total de items sumando todas las cantidades
     // PISTA: Actualiza el textContent del elemento cartCount
-    
+    const totalItems = carrito.reduce((acc, item) => acc + item.cantidad, 0);
+cartCount.textContent = totalItems;
+
+
     // TODO: Actualizar el total del precio
     actualizarTotal();
     
@@ -97,10 +123,17 @@ function actualizarCarrito() {
     // TODO: Mostrar mensaje de carrito vacío o los productos
     // PISTA: Si carrito.length === 0, mostrar emptyCart y ocultar cartContainer
     // PISTA: Si hay productos, hacer lo contrario
-    
     if (carrito.length === 0) {
-        // TODO: Implementar lógica para carrito vacío
+        emptyCart.style.display = 'block'; 
+        cartContainer.style.display = 'none';
+        checkoutBtn.disabled = true;
+        clearCartBtn.disabled = true;
         return;
+    } else {
+        emptyCart.style.display = 'none';       
+        cartContainer.style.display = 'block';
+        checkoutBtn.disabled = false;
+        clearCartBtn.disabled = false;
     }
     
     // TODO: Mostrar items del carrito
@@ -137,48 +170,99 @@ function actualizarCarrito() {
 
 // TODO: Función para cambiar la cantidad de un producto
 function cambiarCantidad(productoId, cambio) {
+    // Busca el item en el carrito usando find()
+    const item = carrito.find(item => item.id === productoId);
+    if (item) {
+        // Suma el cambio a la cantidad actual
+        item.cantidad += cambio;
+        // Si la cantidad queda <= 0, elimina el producto del carrito
+        if (item.cantidad <= 0) {
+            eliminarDelCarrito(productoId);
+        }
+    }
     // PISTA: Busca el item en el carrito usando find()
     // PISTA: Suma el cambio a la cantidad actual
     // PISTA: Si la cantidad queda <= 0, elimina el producto del carrito
     // PISTA: Llama a actualizarCarrito() para refrescar la vista
+    actualizarCarrito();
 }
-
 // TODO: Función para actualizar cantidad directamente desde el input
 function actualizarCantidad(productoId, nuevaCantidad) {
-    // PISTA: Convierte nuevaCantidad a entero con parseInt()
-    // PISTA: Busca el item y actualiza su cantidad
-    // PISTA: Si la cantidad es <= 0, elimina el producto
+    // PISTA: Busca el item en el carrito usando find()
+    const item = carrito.find(item => item.id === productoId);
+    if (item) {
+        // PISTA: Convierte nuevaCantidad a entero con parseInt()
+        const cantidad = parseInt(nuevaCantidad);
+        // PISTA: Busca el item y actualiza su cantidad
+        if (cantidad > 0) {
+            item.cantidad = cantidad;
+        } else {
+            // PISTA: Si la cantidad es <= 0, elimina el producto
+            eliminarDelCarrito(productoId);
+        }
+    }
 }
 
 // TODO: Función para eliminar un producto del carrito
 function eliminarDelCarrito(productoId) {
-    // PISTA: Usa filter() para crear un nuevo array sin el producto a eliminar
-    // PISTA: Actualiza el array carrito con el resultado del filter
-    // PISTA: Llama a actualizarCarrito()
+    // PISTA: Busca el item en el carrito usando find()
+    const item = carrito.find(item => item.id === productoId);
+    if (item) {
+        // PISTA: Usa filter() para crear un nuevo array sin el producto a eliminar
+        carrito = carrito.filter(item => item.id !== productoId);
+        // PISTA: Actualiza el array carrito con el resultado del filter
+        // PISTA: Llama a actualizarCarrito()
+    }
 }
 
 // Función para actualizar el total del carrito
 function actualizarTotal() {
+
     // TODO: Calcular el total sumando precio * cantidad de cada item
     // PISTA: Usa reduce() para sumar todos los subtotales
     // PISTA: Actualiza el textContent de totalAmount con el resultado
-    const total = 0; // Reemplaza esto con tu cálculo
+    const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
     totalAmount.textContent = total.toFixed(2);
 }
 
 // TODO: Función para proceder al pago (básica)
 function procederPago() {
-    // PISTA: Verifica que el carrito no esté vacío
-    // PISTA: Puedes usar mostrarModal() para mostrar información de la compra
-    // PISTA: O usar alert() para una versión más simple
-    // PISTA: Pregunta al usuario si confirma la compra
-    // PISTA: Si confirma, vacía el carrito y muestra mensaje de éxito
+    // Verifica que el carrito no esté vacío
+    if (carrito.length === 0) {
+        mostrarMensaje('El carrito está vacío. Agrega productos antes de comprar.');
+        return;
+    }
+
+    // Calcula el total de la compra
+    const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+
+    // Muestra modal de confirmación de compra
+    mostrarModal({
+        icono: '🛒',
+        titulo: 'Confirmar compra',
+        mensaje: `¿Deseas confirmar tu compra por $${total.toFixed(2)}?\n\nProductos: ${carrito.length}`,
+        textoConfirmar: 'Sí, comprar',
+        textoCancel: 'Cancelar',
+        onConfirmar: () => {
+            vaciarCarrito();
+            mostrarMensaje('¡Compra realizada con éxito!');
+        }
+    });
 }
 
 // TODO: Función para vaciar todo el carrito
 function vaciarCarrito() {
-    // PISTA: Asigna un array vacío a la variable carrito
-    // PISTA: Llama a actualizarCarrito() para refrescar la vista
+    mostrarModal({
+        icono: '🗑️',
+        titulo: 'Vaciar carrito',
+        mensaje: 'Esta acción eliminará todos los productos del carrito. No se puede deshacer.',
+        textoConfirmar: 'Sí, vaciar',
+        textoCancel: 'Cancelar',
+        onConfirmar: () => {
+            carrito = [];
+            actualizarCarrito();
+        }
+    });
 }
 
 /* 
