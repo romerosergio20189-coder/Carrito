@@ -4,6 +4,9 @@ let productos = [];
 // Array del carrito de compras
 let carrito = [];
 
+// Variable para controlar el estado de sesión
+let usuarioLogueado = false;
+
 // Referencias a elementos del DOM
 const productosContainer = document.getElementById('products-container');
 const cartSection = document.getElementById('cart-section');
@@ -15,21 +18,20 @@ const totalAmount = document.getElementById('total-amount');
 const checkoutBtn = document.getElementById('checkout-btn');
 const clearCartBtn = document.getElementById('clear-cart');
 const loginBtn = document.querySelector('.login-btn');
+const logoutBtn = document.querySelector('.logout-btn');
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', async function() {
     await cargarProductos();
     mostrarProductos();
     actualizarCarrito();
-    
-    // TODO: Agregar event listeners para los botones
+
     checkoutBtn.addEventListener('click', procederPago);
     clearCartBtn.addEventListener('click', mostrarModalVaciarCarrito);
-    loginBtn.addEventListener('click', mostrarModalLogin);
-    // PISTA: checkoutBtn necesita un evento 'click' que llame a una función para procesar el pago
-    // PISTA: clearCartBtn necesita un evento 'click' que llame a mostrarModalVaciarCarrito()
-    // PISTA: loginBtn necesita un evento 'click' que llame a mostrarModalLogin()
-    // NOTA: Las funciones de modales ya están implementadas al final del archivo
+    if (loginBtn) loginBtn.addEventListener('click', mostrarModalLogin);
+    if (logoutBtn) logoutBtn.addEventListener('click', mostrarModalLogout);
+
+    actualizarBotonesSesion();
 });
 
 // Función para cargar productos desde JSON
@@ -191,7 +193,7 @@ function actualizarCantidad(productoId, nuevaCantidad) {
     // PISTA: Busca el item en el carrito usando find()
     const item = carrito.find(item => item.id === productoId);
     if (item) {
-        // PISTA: Convierte nuevaCantidad a entero con parseInt()
+        // PISTA: Convierte nuevaCantidad a entero with parseInt()
         const cantidad = parseInt(nuevaCantidad);
         // PISTA: Busca el item y actualiza su cantidad
         if (cantidad > 0) {
@@ -212,6 +214,7 @@ function eliminarDelCarrito(productoId) {
         carrito = carrito.filter(item => item.id !== productoId);
         // PISTA: Actualiza el array carrito con el resultado del filter
         // PISTA: Llama a actualizarCarrito()
+        actualizarCarrito();
     }
 }
 
@@ -462,9 +465,119 @@ function mostrarModalLogin() {
     mostrarModal({
         icono: '👤',
         titulo: 'Iniciar Sesión',
-        mensaje: 'Funcionalidad de login en desarrollo.\n\nPronto podrás:\n• Guardar tu carrito\n• Ver historial de compras\n• Gestionar tus datos\n• Recibir ofertas exclusivas',
-        textoConfirmar: 'Entendido',
-        textoCancel: '',
-        onConfirmar: null
+        mensaje: `
+            <form id="login-form" style="display: flex; flex-direction: column; gap: 10px;">
+                <input type="email" id="login-email" placeholder="Email" required style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <input type="password" id="login-password" placeholder="Contraseña" required style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <button type="button" id="show-register" style="margin-top:10px; background: none; border: none; color: #2980b9; cursor: pointer;">¿No tienes cuenta? Regístrate</button>
+            </form>
+        `,
+        textoConfirmar: 'Iniciar',
+        textoCancel: 'Cancelar',
+        onConfirmar: async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (!email || !password) {
+                mostrarMensaje('Completa ambos campos');
+                return;
+            }
+            try {
+                const response = await fetch('https://xp8qpg8w-3000.brs.devtunnels.ms/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (response.ok) {
+                    mostrarMensaje('¡Login exitoso!');
+                    usuarioLogueado = true;
+                    actualizarBotonesSesion();
+                } else {
+                    mostrarMensaje('Email o contraseña incorrectos');
+                }
+            } catch (error) {
+                mostrarMensaje('Error de conexión');
+            }
+        }
     });
+
+    setTimeout(() => {
+        const btnRegister = document.getElementById('show-register');
+        if (btnRegister) {
+            btnRegister.addEventListener('click', () => {
+                mostrarModalRegistro();
+            });
+        }
+    }, 100);
+}
+
+// Modal de registro
+function mostrarModalRegistro() {
+    mostrarModal({
+        icono: '📝',
+        titulo: 'Registrarse',
+        mensaje: `
+            <form id="register-form" style="display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="register-name" placeholder="Nombre" required style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <input type="email" id="register-email" placeholder="Email" required style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <input type="password" id="register-password" placeholder="Contraseña" required style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            </form>
+        `,
+        textoConfirmar: 'Registrar',
+        textoCancel: 'Cancelar',
+        onConfirmar: async () => {
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            if (!name || !email || !password) {
+                mostrarMensaje('Completa todos los campos');
+                return;
+            }
+            try {
+                const response = await fetch('https://xp8qpg8w-3000.brs.devtunnels.ms/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                if (response.ok) {
+                    mostrarMensaje('¡Registro exitoso! Ahora puedes iniciar sesión.');
+                    usuarioLogueado = true;
+                    actualizarBotonesSesion();
+                } else {
+                    mostrarMensaje('Error al registrar. Intenta con otro email.');
+                }
+            } catch (error) {
+                mostrarMensaje('Error de conexión');
+            }
+        }
+    });
+}
+
+// Modifica mostrarModalLogout para mostrar el botón de login y ocultar logout al cerrar sesión
+function mostrarModalLogout() {
+    mostrarModal({
+        icono: '🚪',
+        titulo: 'Cerrar sesión',
+        mensaje: '¿Seguro que deseas cerrar sesión?',
+        textoConfirmar: 'Cerrar sesión',
+        textoCancel: 'Cancelar',
+        onConfirmar: async () => {
+            // Si tu backend tiene endpoint de logout, puedes hacer la petición aquí
+            // await fetch('https://xp8qpg8w-3000.brs.devtunnels.ms/auth/logout', { method: 'POST' });
+
+            usuarioLogueado = false;
+            actualizarBotonesSesion();
+            mostrarMensaje('Sesión cerrada');
+        }
+    });
+}
+
+// Función para actualizar la visibilidad de los botones de sesión
+function actualizarBotonesSesion() {
+    if (usuarioLogueado) {
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = 'inline-block';
+    } else {
+        if (loginBtn) loginBtn.style.display = 'inline-block';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+    }
 }
