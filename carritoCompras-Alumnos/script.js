@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Función para cargar productos desde JSON
 async function cargarProductos() {
     try {
-        const response = await fetch('./productos.json');
+        const response = await fetch('https://xp8qpg8w-3000.brs.devtunnels.ms/products');
         productos = await response.json();
     } catch (error) {
         console.error('Error cargando productos:', error);
@@ -57,17 +57,18 @@ async function cargarProductos() {
 // Función para mostrar los productos en la página
 function mostrarProductos() {
     productosContainer.innerHTML = '';
-    
-    productos.forEach(producto => {
+
+    productos.products.forEach(producto => {
         const productoCard = document.createElement('div');
         productoCard.className = 'product-card';
         
         productoCard.innerHTML = `
             <div class="product-image">${crearImagenProducto(producto)}</div>
             <div class="product-info">
-                <h3 class="product-name">${producto.nombre}</h3>
-                <p class="product-description">${producto.descripcion}</p>
-                <div class="product-price">$${producto.precio.toFixed(2)}</div>
+                <h3 class="product-name">${producto.name}</h3>
+                <p class="product-description">${producto.description}</p>
+                <p class="product-stock">Stock: ${producto.stock}</p>
+                <div class="product-price">$${producto.price}</div>
                 <button class="add-to-cart-btn" onclick="agregarAlCarrito(${producto.id})">
                     Agregar al Carrito
                 </button>
@@ -81,7 +82,7 @@ function mostrarProductos() {
 // TODO: Función para agregar un producto al carrito
     function agregarAlCarrito(productoId) {
     // Buscar el producto en el array 'productos' usando el productoId
-    const producto = productos.find(p => p.id === productoId);
+    const producto = productos.products.find(p => p.id === productoId);
     if (!producto) {
         mostrarMensaje('Producto no encontrado');
         return;
@@ -93,14 +94,14 @@ function mostrarProductos() {
     if (itemCarrito) {
         // Si existe, incrementa la cantidad
         itemCarrito.cantidad += 1;
-        mostrarMensaje(`Se agregó otra unidad de "${producto.nombre}"`);
+        mostrarMensaje(`Se agregó otra unidad de "${producto.name}" al carrito`);
     } else {
         // Si no existe, agrégalo con cantidad 1
         carrito.push({
             ...producto,
             cantidad: 1
         });
-        mostrarMensaje(`"${producto.nombre}" agregado al carrito`);
+        mostrarMensaje(`"${producto.name}" agregado al carrito`);
     }
 
     // No olvides llamar actualizarCarrito() al final
@@ -150,8 +151,8 @@ cartCount.textContent = totalItems;
             <div class="cart-item-header">
                 <div class="cart-item-image">${crearImagenCarrito(item)}</div>
                 <div class="cart-item-info">
-                    <h4>${item.nombre}</h4>
-                    <div class="cart-item-price">$${item.precio.toFixed(2)}</div>
+                    <h4>${item.name}</h4>
+                    <div class="cart-item-price">$${item.price.toFixed(2)}</div>
                 </div>
             </div>
             <div class="quantity-controls">
@@ -162,7 +163,7 @@ cartCount.textContent = totalItems;
                 <button class="remove-btn" onclick="eliminarDelCarrito(${item.id})">Eliminar</button>
             </div>
             <div class="item-total">
-                Total: $${(item.precio * item.cantidad).toFixed(2)}
+                Total: $${(item.price * item.cantidad).toFixed(2)}
             </div>
         `;
         
@@ -224,7 +225,7 @@ function actualizarTotal() {
     // TODO: Calcular el total sumando precio * cantidad de cada item
     // PISTA: Usa reduce() para sumar todos los subtotales
     // PISTA: Actualiza el textContent de totalAmount con el resultado
-    const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+    const total = carrito.reduce((acc, item) => acc + item.price * item.cantidad, 0);
     totalAmount.textContent = total.toFixed(2);
 }
 
@@ -237,7 +238,7 @@ function procederPago() {
     }
 
     // Calcula el total de la compra
-    const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+    const total = carrito.reduce((acc, item) => acc + item.price * item.cantidad, 0);
 
     // Muestra modal de confirmación de compra
     mostrarModal({
@@ -489,8 +490,10 @@ function mostrarModalLogin() {
                 });
                 if (response.ok) {
                     mostrarMensaje('¡Login exitoso!');
+                    const data = await response.json();
                     usuarioLogueado = true;
                     actualizarBotonesSesion();
+                    localStorage.setItem('user', JSON.stringify(data.user));
                 } else {
                     mostrarMensaje('Email o contraseña incorrectos');
                 }

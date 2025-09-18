@@ -165,6 +165,11 @@ header h1 {
     color: #e74c3c;
     margin-bottom: 1rem;
 }
+.product-stock {
+    font-size: 0.9rem;
+    color: #27ae60;
+    margin-bottom: 1rem;
+}
 
 .add-to-cart-btn {
     width: 100%;
